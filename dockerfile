@@ -1,7 +1,6 @@
 FROM amaic/systemd
 
 RUN apt-get install -y wget jq yq 
-RUN apt-get install -y bash-completion iproute2
 
 WORKDIR /install
 
@@ -42,4 +41,20 @@ wget https://raw.githubusercontent.com/containerd/containerd/main/containerd.ser
 
 ln --symbolic /usr/local/lib/systemd/system/containerd.service /etc/systemd/system/multi-user.target.wants/containerd.service
 
+mkdir --parents /etc/containerd
+
+containerd config default | \
+tomlq --toml-output \
+'
+(.plugins.["io.containerd.grpc.v1.cri"]) |= (
+	(.sandbox_image) |= "registry.k8s.io/pause:3.10" |
+	(.containerd.runtimes.runc.options.SystemdCgroup) |= true
+)
+' \
+> /etc/containerd/config.toml
+
 EOD
+
+
+# RUN apt-get install -y bash-completion iproute2
+

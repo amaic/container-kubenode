@@ -36,6 +36,7 @@ wget https://github.com/containerd/containerd/releases/download/v${CONTAINERD_VE
 tar Cxzvf /usr/local containerd.tar.gz
 
 mkdir --parents /usr/local/lib/systemd/system
+
 wget https://raw.githubusercontent.com/containerd/containerd/main/containerd.service \
 --output-document=/usr/local/lib/systemd/system/containerd.service
 
@@ -54,6 +55,52 @@ tomlq --toml-output \
 > /etc/containerd/config.toml
 
 EOD
+
+ARG KUBERNETES_VERSION
+RUN <<EOD
+
+wget https://dl.k8s.io/v${KUBERNETES_VERSION}/bin/linux/${ARCHITECTURE}/kubelet \
+--output-document=kubelet
+
+install -m 755 ./kubelet /usr/local/bin/kubelet
+
+mkdir --parents /usr/lib/systemd/system/kubelet.service.d
+mkdir --parents /etc/systemd/system/kubelet.service.d
+
+cat <<EOB > /usr/lib/systemd/system/kubelet.service
+
+[Unit]
+Description=kubelet: The Kubernetes Node Agent
+Documentation=https://kubernetes.io/docs/
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+ExecStart=/usr/local/bin/kubelet
+Restart=always
+StartLimitInterval=0
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+
+EOB
+
+ln --symbolic /usr/lib/systemd/system/kubelet.service /etc/systemd/system/multi-user.target.wants/kubelet.service
+
+EOD
+
+
+
+# wget https://dl.k8s.io/v${KUBERNETES_VERSION}/bin/linux/${ARCHITECTURE}/kubeadm \
+# --output-document=kubeadm
+
+# install -m 755 ./kubeadm /usr/local/bin/kubeadm
+
+# wget https://dl.k8s.io/v${KUBERNETES_VERSION}/bin/linux/${ARCHITECTURE}/kubectl \
+# --output-document=kubectl
+
+# install -m 755 ./kubectl /usr/local/bin/kubectl
 
 
 # RUN apt-get install -y bash-completion iproute2
